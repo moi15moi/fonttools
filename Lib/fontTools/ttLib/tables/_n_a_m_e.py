@@ -3,6 +3,8 @@ from fontTools.misc import sstruct
 from fontTools.misc.textTools import bytechr, byteord, bytesjoin, strjoin, tobytes, tostr, safeEval
 from fontTools.misc.encodingTools import getEncoding
 from fontTools.ttLib import newTable
+from fontTools.ttLib.tables.sortNamesStrategy.AbstractSortStrategy import AbstractSortStrategy
+from fontTools.ttLib.tables.sortNamesStrategy.DefaultStrategy import DefaultStrategy
 from . import DefaultTable
 import struct
 import logging
@@ -99,53 +101,36 @@ class table__n_a_m_e(DefaultTable.DefaultTable):
 					return namerecord
 		return None # not found
 
-	def getDebugName(self, nameID):
-		englishName = someName = None
-		for name in self.names:
-			if name.nameID != nameID:
-				continue
-			try:
-				unistr = name.toUnicode()
-			except UnicodeDecodeError:
-				continue
+	def getDebugName(self, nameID, sortStrategy: AbstractSortStrategy = DefaultStrategy()):
 
-			someName = unistr
-			if (name.platformID, name.langID) in ((1, 0), (3, 0x409)):
-				englishName = unistr
-				break
-		if englishName:
-			return englishName
-		elif someName:
-			return someName
-		else:
-			return None
+		return sortStrategy.getDebugName(nameID, self.names)
 
-	def getFirstDebugName(self, nameIDs):
+	def getFirstDebugName(self, nameIDs, sortStrategy: AbstractSortStrategy = DefaultStrategy()):
 		for nameID in nameIDs:
-			name = self.getDebugName(nameID)
+			name = self.getDebugName(nameID, sortStrategy)
 			if name is not None:
 				return name
 		return None
 
-	def getBestFamilyName(self):
+	def getBestFamilyName(self, sortStrategy: AbstractSortStrategy = DefaultStrategy()):
 		# 21 = WWS Family Name
 		# 16 = Typographic Family Name
 		# 1 = Family Name
-		return self.getFirstDebugName((21, 16, 1))
+		return self.getFirstDebugName((21, 16, 1), sortStrategy)
 
-	def getBestSubFamilyName(self):
+	def getBestSubFamilyName(self, sortStrategy: AbstractSortStrategy = DefaultStrategy()):
 		# 22 = WWS SubFamily Name
 		# 17 = Typographic SubFamily Name
 		# 2 = SubFamily Name
-		return self.getFirstDebugName((22, 17, 2))
+		return self.getFirstDebugName((22, 17, 2), sortStrategy)
 
-	def getBestFullName(self):
+	def getBestFullName(self, sortStrategy: AbstractSortStrategy = DefaultStrategy()):
 		# 4 = Full Name
 		# 6 = PostScript Name
 		for nameIDs in ((21, 22), (16, 17), (1, 2), (4, ), (6, )):
 			if len(nameIDs) == 2:
-				name_fam = self.getDebugName(nameIDs[0])
-				name_subfam = self.getDebugName(nameIDs[1])
+				name_fam = self.getDebugName(nameIDs[0], sortStrategy)
+				name_subfam = self.getDebugName(nameIDs[1], sortStrategy)
 				if None in [name_fam, name_subfam]:
 					continue  # if any is None, skip
 				name = f"{name_fam} {name_subfam}"
@@ -153,7 +138,7 @@ class table__n_a_m_e(DefaultTable.DefaultTable):
 					name = f"{name_fam}"
 				return name
 			else:
-				name = self.getDebugName(nameIDs[0])
+				name = self.getDebugName(nameIDs[0], sortStrategy)
 				if name is not None:
 					return name
 		return None
