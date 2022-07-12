@@ -120,10 +120,16 @@ def pad(data, size):
 
 
 def tostr(s, encoding="ascii", errors="strict"):
-    if not isinstance(s, str):
-        return s.decode(encoding, errors)
-    else:
-        return s
+	if not isinstance(s, str):
+		try:
+			return s.decode(encoding, errors)
+		except UnicodeDecodeError:
+			try:
+				return s.decode("utf-16-be", errors)
+			except UnicodeDecodeError:
+				raise
+	else:
+		return s
 
 
 def tobytes(s, encoding="ascii", errors="strict"):
